@@ -1,0 +1,27 @@
+QListWidget {
+    background-color: #171f2d;
+    border-radius: 10px; /* Скругленные углы */
+}
+
+QWidget#List {
+    border: 1px solid #d3d3d3; /* Цвет рамки */
+    border-radius: 10px; /* Скругленные углы */
+}
+
+QPushButton#addButton {
+    background-color: #10192a;
+    border-radius: 10px;
+}
+
+QPushButton#removeButton {
+    background-color: #10192a;
+    border-radius: 10px;
+}
+
+/* Добавляем стиль для диалогового окна */
+QDialog {
+    background-color: #0c0f1b; /* Цвет фона */
+    border-radius: 20px; /* Скругленные углы */
+
+}
+

@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>style.css</file>
+        <file>image/add.png</file>
+        <file>image/arrow.png</file>
+        <file>image/backarrow.png</file>
+        <file>image/remove.png</file>
+        <file>image/more.png</file>
+        <file>image/scratch.png</file>
+        <file>image/OK.png</file>
+    </qresource>
+</RCC>
