@@ -13,6 +13,8 @@
 #include <QPainter>
 #include <QPainterPath>
 
+#include "databasemanager.h"
+
 namespace Ui {
 class List;
 }
@@ -42,7 +44,9 @@ private slots:
 
 private:
     Ui::List *ui;
-    QMap<int, QString> instructions; // Хранение инструкций для каждой задачи
+    // QMap<int, QString> instructions; // Removed in favor of DB
+    void loadTasksFromDb();
+    void createTaskItem(int id, const QString &text, bool isCompleted);
 };
 
 #endif // LIST_H

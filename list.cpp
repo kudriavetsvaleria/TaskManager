@@ -34,12 +34,15 @@ List::List(QWidget *parent)
     }
 
     setAttribute(Qt::WA_TranslucentBackground);
-}
 
-int num = 0;
+    // Initialize Database
+    DatabaseManager::instance().openDatabase();
+    loadTasksFromDb();
+}
 
 List::~List()
 {
+    // DatabaseManager::instance().closeDatabase(); // Singleton handles this on destruction usually, or we can explicit close if needed
     delete ui;
 }
 
@@ -53,7 +56,16 @@ void List::paintEvent(QPaintEvent *event)
     QWidget::paintEvent(event);
 }
 
-void List::on_addButton_clicked()
+void List::loadTasksFromDb()
+{
+    QList<TaskData> tasks = DatabaseManager::instance().getAllTasks();
+    for (const TaskData &task : tasks) {
+        createTaskItem(task.id, task.description, task.isCompleted);
+    }
+    updateTaskNumbers();
+}
+
+void List::createTaskItem(int id, const QString &text, bool isCompleted)
 {
     QIcon more(":/image/more.png");
     QIcon scratch(":/image/scratch.png");
@@ -66,10 +78,9 @@ void List::on_addButton_clicked()
     QWidget *widget = new QWidget();
     QHBoxLayout *layout = new QHBoxLayout(widget);
 
-    int taskId = ++num;
-    newItem->setData(Qt::UserRole, taskId);
+    newItem->setData(Qt::UserRole, id);
 
-    QLabel *label = new QLabel(QString::number(taskId));
+    QLabel *label = new QLabel(); // Number will be set by updateTaskNumbers
     label->setFont(QFont("Arial", 15));
     label->setIndent(7);
 
@@ -77,8 +88,29 @@ void List::on_addButton_clicked()
     lineEdit->setFont(QFont("Arial", 15));
     lineEdit->setPlaceholderText("Type the description ...");
     lineEdit->setFont(fontCenturyGothic);
+    lineEdit->setText(text);
+    if (isCompleted) {
+         QFont font = lineEdit->font();
+         font.setStrikeOut(true);
+         lineEdit->setFont(font);
+    }
     lineEdit->setStyleSheet("QLineEdit { background: transparent; color: white; border: none; }");
+    // Capture text changes to update DB
+    connect(lineEdit, &QLineEdit::editingFinished, this, [id, lineEdit](){
+         DatabaseManager::instance().updateTaskDescription(id, lineEdit->text());
+    });
 
+    // Actually, to avoid compilation error, I won't call a non-existent method.
+    // But wait, how do we save the text the user types?
+    // The user types into `lineEdit`. existing code didn't "save" it anywhere because it was just UI.
+    // Now we need to save it.
+    // I will add `updateTaskDescription` to DatabaseManager in a subsequent step or previous? 
+    // I can't go back. I will add it in the NEXT step or via `multi_replace`. 
+    // I'll proceed with this file, but comment out the update description part or simple add a TODO.
+    // Actually, I can use `createTask` with a default "New Task" or empty.
+    // But when user types, we need to save.
+    // I will add `updateTaskDescription` to `DatabaseManager` in a separate file edit immediately after this.
+    
     QPushButton *strikeButton = new QPushButton(widget);
     int buttonSize = lineEdit->fontMetrics().height() * 1.6;
     strikeButton->setFixedSize(buttonSize, buttonSize);
@@ -88,7 +120,7 @@ void List::on_addButton_clicked()
 
     QPushButton *canvasButton = new QPushButton(widget);
     canvasButton->setFixedSize(buttonSize, buttonSize);
-    connect(canvasButton, &QPushButton::clicked, this, [this, taskId]() { openCanvas(taskId); });
+    connect(canvasButton, &QPushButton::clicked, this, [this, id]() { openCanvas(id); });
     canvasButton->setIcon(more);
     canvasButton->setStyleSheet("QPushButton { background-color: #10192a; color: #FFFFFF; border: none; border-radius: 10px;}");
 
@@ -106,8 +138,30 @@ void List::on_addButton_clicked()
 
     ui->listWidget->addItem(newItem);
     ui->listWidget->setItemWidget(newItem, widget);
+}
 
-    updateTaskNumbers();
+void List::on_addButton_clicked()
+{
+    int id = -1;
+    if (DatabaseManager::instance().createTask("", id)) {
+        createTaskItem(id, "", false);
+        updateTaskNumbers();
+        
+        // Focus the new line edit
+        int row = ui->listWidget->count() - 1;
+        QListWidgetItem *item = ui->listWidget->item(row);
+        QWidget *widget = ui->listWidget->itemWidget(item);
+        if (widget) {
+            QLineEdit *lineEdit = widget->findChild<QLineEdit*>();
+            if (lineEdit) {
+                lineEdit->setFocus();
+                // Add connection for saving text on change
+                connect(lineEdit, &QLineEdit::editingFinished, this, [id, lineEdit](){
+                     DatabaseManager::instance().updateTaskDescription(id, lineEdit->text());
+                });
+            }
+        }
+    }
 }
 
 void List::on_removeButton_clicked()
@@ -115,10 +169,12 @@ void List::on_removeButton_clicked()
     QListWidgetItem *currentItem = ui->listWidget->currentItem();
     if (currentItem)
     {
-        int row = ui->listWidget->row(currentItem);
-        delete ui->listWidget->takeItem(row);
-
-        updateTaskNumbers();
+        int id = currentItem->data(Qt::UserRole).toInt();
+        if (DatabaseManager::instance().removeTask(id)) {
+            int row = ui->listWidget->row(currentItem);
+            delete ui->listWidget->takeItem(row);
+            updateTaskNumbers();
+        }
     }
 }
 
@@ -162,12 +218,26 @@ void List::toggleStrikeOut()
                 QLineEdit *lineEdit = qobject_cast<QLineEdit*>(layout->itemAt(1)->widget());
                 if (lineEdit)
                 {
-                    QString taskText = lineEdit->text();
-                    if (!taskText.isEmpty())
-                    {
+                    // Find the ID
+                    QListWidgetItem* item = nullptr;
+                    for(int i=0; i < ui->listWidget->count(); ++i) {
+                         if(ui->listWidget->itemWidget(ui->listWidget->item(i)) == widget) {
+                             item = ui->listWidget->item(i);
+                             break;
+                         }
+                    }
+                    
+                    if (item) {
+                        int id = item->data(Qt::UserRole).toInt();
+                        bool isComplete = !lineEdit->font().strikeOut(); // The NEW state
+                        
+                        // Update UI
                         QFont font = lineEdit->font();
-                        font.setStrikeOut(!font.strikeOut());
+                        font.setStrikeOut(isComplete);
                         lineEdit->setFont(font);
+                        
+                        // Update DB
+                        DatabaseManager::instance().updateTaskStatus(id, isComplete);
                     }
                 }
             }
@@ -187,7 +257,6 @@ void List::openCanvas(int taskId)
     int y = this->y();
     canvasDialog->move(x, y);
 
-    // Переопределяем paintEvent для закругленных углов
     canvasDialog->setAttribute(Qt::WA_TranslucentBackground);
     canvasDialog->setObjectName("canvasDialog");
 
@@ -209,7 +278,6 @@ void List::openCanvas(int taskId)
     connect(okayButton, &QPushButton::clicked, canvasDialog, &QDialog::accept);
     okayButton->setStyleSheet("QPushButton { background-color: #10192a; color: #FFFFFF; border: none; border-radius: 10px;}");
 
-    // Устанавливаем закругленные углы для диалогового окна
     QMetaObject::connectSlotsByName(canvasDialog);
     canvasDialog->installEventFilter(this);
 
@@ -238,10 +306,10 @@ bool List::eventFilter(QObject *obj, QEvent *event)
 
 void List::saveInstructions(int taskId, const QString &instructions)
 {
-    this->instructions[taskId] = instructions;
+    DatabaseManager::instance().updateTaskInstructions(taskId, instructions);
 }
 
 QString List::loadInstructions(int taskId)
 {
-    return this->instructions.value(taskId, "");
+     return DatabaseManager::instance().getTaskInstructions(taskId);
 }
