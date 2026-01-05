@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>image/TM.png</file>
         <file>image/add.png</file>
         <file>image/arrow.png</file>
         <file>image/backarrow.png</file>
@@ -9,5 +8,6 @@
         <file>image/remove.png</file>
         <file>image/scratch.png</file>
         <file>style.css</file>
+        <file>image/TM_Logo.png</file>
     </qresource>
 </RCC>

@@ -128,7 +128,7 @@ release/qrc_images.cpp: ../../images.qrc \
 		../../image/backarrow.png \
 		../../image/scratch.png \
 		../../image/add.png \
-		../../image/TM.png
+		../../image/TM_Logo.png
 	C:\Qt\6.8.0\mingw_64\bin\rcc.exe -name images --no-zstd ..\..\images.qrc -o release\qrc_images.cpp
 
 release/qrc_images.cpp: ../../images.qrc \
@@ -141,7 +141,7 @@ release/qrc_images.cpp: ../../images.qrc \
 		../../image/backarrow.png \
 		../../image/scratch.png \
 		../../image/add.png \
-		../../image/TM.png
+		../../image/TM_Logo.png
 	C:\Qt\6.8.0\mingw_64\bin\rcc.exe -name images --no-zstd ..\..\images.qrc -o release\qrc_images.cpp
 
 compiler_moc_predefs_make_all: release/moc_predefs.h
