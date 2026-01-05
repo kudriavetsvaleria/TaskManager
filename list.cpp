@@ -51,10 +51,7 @@ List::List(QWidget *parent)
     ui->removeButton->setStyleSheet(btnStyle);
 }
 
-List::~List()
-{
-    delete ui;
-}
+
 
 void List::paintEvent(QPaintEvent *event)
 {
@@ -77,16 +74,146 @@ void List::mousePressEvent(QMouseEvent *event) {
     }
 }
 
+// 1. Update Mouse Move to move Parent (MainWindow) which is the Anchor
 void List::mouseMoveEvent(QMouseEvent *event) {
     if (event->buttons() & Qt::LeftButton) {
         if (parentWidget()) {
-            // Move PARENT (MainWindow), and MainWindow's moveEvent will move List
             parentWidget()->move(event->globalPosition().toPoint() - dragPosition);
-        } else {
-             move(event->globalPosition().toPoint() - dragPosition);
         }
         event->accept();
     }
+}
+
+// 2. Propagate movement to Canvas
+void List::moveEvent(QMoveEvent *event) {
+    syncCanvas();
+    QWidget::moveEvent(event);
+}
+
+void List::syncCanvas() {
+    if (activeCanvas && activeCanvas->isVisible()) {
+        QPoint targetPos(this->x() + this->width() + 10, this->y());
+        if (activeCanvas->pos() != targetPos) {
+             activeCanvas->move(targetPos);
+        }
+    }
+}
+
+// 3. Modeless Canvas with Dragging support
+void List::openCanvas(int taskId)
+{
+    if (activeCanvas) {
+        activeCanvas->close();
+        delete activeCanvas;
+        activeCanvas = nullptr;
+    }
+
+    QIcon OK(":/image/OK.png");
+
+    activeCanvas = new QDialog(nullptr); // No parent to prevent clipping
+    // Qt::Tool hides from taskbar. 
+    activeCanvas->setWindowFlags(Qt::FramelessWindowHint | Qt::Window | Qt::Tool);
+    activeCanvas->setFixedSize(413, 460);
+    activeCanvas->setAttribute(Qt::WA_TranslucentBackground);
+    activeCanvas->setObjectName("canvasDialog");
+
+    // Position it
+    int x = this->x() + this->width() + 10;
+    int y = this->y();
+    activeCanvas->move(x, y);
+
+    QTextEdit *detailsTextEdit = new QTextEdit(activeCanvas);
+    detailsTextEdit->setGeometry(20, 20, 371, 341);
+    detailsTextEdit->setFont(QFont(Constants::FONT_PRIMARY, 12));
+    detailsTextEdit->setStyleSheet(QString("QTextEdit { background-color: %1; color: %2; border: none; border-radius: 10px;}").arg(Constants::COLOR_TEXT_EDIT_BG, Constants::COLOR_TEXT_WHITE));
+
+    QString instructions = loadInstructions(taskId);
+    detailsTextEdit->setText(instructions);
+
+    QPushButton *okayButton = new QPushButton(activeCanvas);
+    okayButton->setGeometry(20, 380, 371, 61);
+    okayButton->setIcon(OK);
+    okayButton->setIconSize(QSize(28, 28));
+    okayButton->setStyleSheet("QPushButton { background-color: #10192a; color: #FFFFFF; border: none; border-radius: 10px;}");
+    
+    // Save on click
+    connect(okayButton, &QPushButton::clicked, [this, taskId, detailsTextEdit, okayButton]() {
+        saveInstructions(taskId, detailsTextEdit->toPlainText());
+        if (activeCanvas) {
+             activeCanvas->close();
+             // We don't delete here immediately to avoid crash in event loop? 
+             // close() hides it. We can delete it. 
+             // But actually, openCanvas deletes previous one.
+             // Let's just hide/close.
+        }
+    });
+
+    activeCanvas->installEventFilter(this);
+    activeCanvas->show(); 
+}
+
+// Ensure Canvas is closed when List is hidden
+void List::hideEvent(QHideEvent *event) {
+    if (activeCanvas) {
+        activeCanvas->hide();
+    }
+    QWidget::hideEvent(event);
+}
+
+// Ensure Canvas is shown (if it was active?) - No, usually we want it fresh.
+// But we need to declare hideEvent in header.
+
+// Destructor
+List::~List()
+{
+    if (activeCanvas) {
+        delete activeCanvas;
+    }
+    delete ui;
+}
+
+bool List::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == activeCanvas)
+    {
+        if (event->type() == QEvent::Paint) {
+            QDialog *canvasDialog = qobject_cast<QDialog*>(obj);
+            if (canvasDialog)
+            {
+                QPainter painter(canvasDialog);
+                painter.setRenderHint(QPainter::Antialiasing);
+                QPainterPath path;
+                path.addRoundedRect(canvasDialog->rect(), Constants::WINDOW_RADIUS, Constants::WINDOW_RADIUS);
+                painter.fillPath(path, QBrush(QColor(Constants::COLOR_BACKGROUND)));
+            }
+            return true;
+        }
+        else if (event->type() == QEvent::MouseButtonPress) {
+            QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+            if (mouseEvent->button() == Qt::LeftButton) {
+                 // Calculate drag pos relative to MAIN WINDOW Anchor
+                 // We want to drag the ANCHOR (MainWindow) when we drag the Canvas
+                 if (parentWidget()) {
+                     // Store offset from Main Window top-left
+                     dragPosition = mouseEvent->globalPosition().toPoint() - parentWidget()->frameGeometry().topLeft();
+                 }
+                 mouseEvent->accept();
+                 return true;
+            }
+        }
+        else if (event->type() == QEvent::MouseMove) {
+             QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+             if (mouseEvent->buttons() & Qt::LeftButton) {
+                 if (parentWidget()) {
+                     // Move MAIN WINDOW
+                     parentWidget()->move(mouseEvent->globalPosition().toPoint() - dragPosition);
+                 }
+                 mouseEvent->accept();
+                 return true;
+             }
+        }
+    }
+    return QWidget::eventFilter(obj, event);
 }
 
 void List::loadTasksFromDb()
@@ -113,7 +240,7 @@ void List::createTaskItem(int id, const QString &text, bool isCompleted)
 
     newItem->setData(Qt::UserRole, id);
 
-    QLabel *label = new QLabel(); // Number will be set by updateTaskNumbers
+    QLabel *label = new QLabel();
     label->setFont(QFont(Constants::FONT_SECONDARY, Constants::FONT_SIZE_LARGE));
     label->setIndent(7);
 
@@ -128,21 +255,9 @@ void List::createTaskItem(int id, const QString &text, bool isCompleted)
          lineEdit->setFont(font);
     }
     lineEdit->setStyleSheet("QLineEdit { background: transparent; color: white; border: none; }");
-    // Capture text changes to update DB
     connect(lineEdit, &QLineEdit::editingFinished, this, [id, lineEdit](){
          DatabaseManager::instance().updateTaskDescription(id, lineEdit->text());
     });
-
-    // Actually, to avoid compilation error, I won't call a non-existent method.
-    // But wait, how do we save the text the user types?
-    // The user types into `lineEdit`. existing code didn't "save" it anywhere because it was just UI.
-    // Now we need to save it.
-    // I will add `updateTaskDescription` to DatabaseManager in a subsequent step or previous? 
-    // I can't go back. I will add it in the NEXT step or via `multi_replace`. 
-    // I'll proceed with this file, but comment out the update description part or simple add a TODO.
-    // Actually, I can use `createTask` with a default "New Task" or empty.
-    // But when user types, we need to save.
-    // I will add `updateTaskDescription` to `DatabaseManager` in a separate file edit immediately after this.
     
     QPushButton *strikeButton = new QPushButton(widget);
     int buttonSize = lineEdit->fontMetrics().height() * 1.6;
@@ -188,7 +303,6 @@ void List::on_addButton_clicked()
             QLineEdit *lineEdit = widget->findChild<QLineEdit*>();
             if (lineEdit) {
                 lineEdit->setFocus();
-                // Add connection for saving text on change
                 connect(lineEdit, &QLineEdit::editingFinished, this, [id, lineEdit](){
                      DatabaseManager::instance().updateTaskDescription(id, lineEdit->text());
                 });
@@ -262,7 +376,7 @@ void List::toggleStrikeOut()
                     
                     if (item) {
                         int id = item->data(Qt::UserRole).toInt();
-                        bool isComplete = !lineEdit->font().strikeOut(); // The NEW state
+                        bool isComplete = !lineEdit->font().strikeOut(); 
                         
                         // Update UI
                         QFont font = lineEdit->font();
@@ -276,65 +390,6 @@ void List::toggleStrikeOut()
             }
         }
     }
-}
-
-void List::openCanvas(int taskId)
-{
-    QIcon OK(":/image/OK.png");
-
-    QDialog *canvasDialog = new QDialog(this);
-    canvasDialog->setFixedSize(413, 460);
-    canvasDialog->setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
-
-    int x = this->x() + this->width() + 10;
-    int y = this->y();
-    canvasDialog->move(x, y);
-
-    canvasDialog->setAttribute(Qt::WA_TranslucentBackground);
-    canvasDialog->setObjectName("canvasDialog");
-
-    QTextEdit *detailsTextEdit = new QTextEdit(canvasDialog);
-    detailsTextEdit->setGeometry(20, 20, 371, 341);
-    detailsTextEdit->setFont(QFont("Century Gothic", 12));
-    detailsTextEdit->setStyleSheet("QTextEdit { background-color: #171f2d; color: #FFFFFF; border: none; border-radius: 10px;}");
-
-    QString instructions = loadInstructions(taskId);
-    detailsTextEdit->setText(instructions);
-
-    QPushButton *okButton = new QPushButton(canvasDialog);
-    okButton->setGeometry(0, 0, 0, 0);
-
-    QPushButton *okayButton = new QPushButton(canvasDialog);
-    okayButton->setGeometry(20, 380, 371, 61);
-    okayButton->setIcon(OK);
-    okayButton->setIconSize(QSize(28, 28));
-    connect(okayButton, &QPushButton::clicked, canvasDialog, &QDialog::accept);
-    okayButton->setStyleSheet("QPushButton { background-color: #10192a; color: #FFFFFF; border: none; border-radius: 10px;}");
-
-    QMetaObject::connectSlotsByName(canvasDialog);
-    canvasDialog->installEventFilter(this);
-
-    if (canvasDialog->exec() == QDialog::Accepted) {
-        saveInstructions(taskId, detailsTextEdit->toPlainText());
-    }
-}
-
-bool List::eventFilter(QObject *obj, QEvent *event)
-{
-    if (obj->objectName() == "canvasDialog" && event->type() == QEvent::Paint)
-    {
-        QDialog *canvasDialog = qobject_cast<QDialog*>(obj);
-        if (canvasDialog)
-        {
-            QPainter painter(canvasDialog);
-            painter.setRenderHint(QPainter::Antialiasing);
-            QPainterPath path;
-            path.addRoundedRect(canvasDialog->rect(), 20, 20);
-            painter.fillPath(path, QBrush(QColor(Constants::COLOR_BACKGROUND)));
-        }
-        return true;
-    }
-    return QWidget::eventFilter(obj, event);
 }
 
 void List::saveInstructions(int taskId, const QString &instructions)

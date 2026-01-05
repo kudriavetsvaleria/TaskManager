@@ -27,6 +27,12 @@ public:
     explicit List(QWidget *parent = nullptr);
     ~List();
 
+    // Explicitly sync canvas position (for smooth dragging)
+    void syncCanvas(); // To sync Canvas hiding
+    
+    // Accessor for Native Move
+    QDialog* getActiveCanvas() const { return activeCanvas; }
+
 protected:
     void paintEvent(QPaintEvent *event) override;
     bool eventFilter(QObject *obj, QEvent *event) override; 
@@ -34,6 +40,10 @@ protected:
     // Window dragging
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
+    void moveEvent(QMoveEvent *event) override; // To sync Canvas
+    void hideEvent(QHideEvent *event) override;
+    
+
 
 
 private slots:
@@ -52,6 +62,7 @@ private:
     void loadTasksFromDb();
     void createTaskItem(int id, const QString &text, bool isCompleted);
     QPoint dragPosition;
+    QDialog *activeCanvas = nullptr; // Track the open dialog
 };
 
 #endif // LIST_H
