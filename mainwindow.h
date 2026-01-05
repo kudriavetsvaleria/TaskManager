@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include "List.h"
+#include "sidewidget.h"
 #include <QPainter>
 
 QT_BEGIN_NAMESPACE
@@ -27,5 +28,13 @@ private slots:
 private:
     Ui::MainWindow *ui;
     List *list;
+    SideWidget *sideWidget;
+    int countOpen;
+    QPoint dragPosition;
+    
+    // Window dragging
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void moveEvent(QMoveEvent *event) override;
 };
 #endif // MAINWINDOW_H

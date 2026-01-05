@@ -12,16 +12,20 @@ SOURCES += \
     list.cpp \
     main.cpp \
     mainwindow.cpp \
-    databasemanager.cpp
+    databasemanager.cpp \
+    sidewidget.cpp
 
 HEADERS += \
     list.h \
     mainwindow.h \
-    databasemanager.h
+    databasemanager.h \
+    constants.h \
+    sidewidget.h
 
 FORMS += \
     list.ui \
-    mainwindow.ui
+    mainwindow.ui \
+    sidewidget.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

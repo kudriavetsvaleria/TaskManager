@@ -11,11 +11,15 @@ QWidget#List {
 QPushButton#addButton {
     background-color: #10192a;
     border-radius: 10px;
+    border: none;
+    color: white;
 }
 
 QPushButton#removeButton {
     background-color: #10192a;
     border-radius: 10px;
+    border: none;
+    color: white;
 }
 
 /* Добавляем стиль для диалогового окна */

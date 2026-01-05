@@ -29,7 +29,11 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event) override;
-    bool eventFilter(QObject *obj, QEvent *event) override; // Добавляем объявление функции eventFilter
+    bool eventFilter(QObject *obj, QEvent *event) override; 
+    
+    // Window dragging
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
 
 
 private slots:
@@ -47,6 +51,7 @@ private:
     // QMap<int, QString> instructions; // Removed in favor of DB
     void loadTasksFromDb();
     void createTaskItem(int id, const QString &text, bool isCompleted);
+    QPoint dragPosition;
 };
 
 #endif // LIST_H

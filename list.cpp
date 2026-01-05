@@ -15,34 +15,44 @@
 #include <QApplication>
 #include <QPainter>
 #include <QPainterPath>
+#include <QMouseEvent>
+#include <QSettings>
+#include "constants.h"
 
 List::List(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::List)
 {
     ui->setupUi(this);
-    setWindowFlags(Qt::FramelessWindowHint);
-    this->move(150, 75);
+    setFixedSize(413, 462);
 
     this->setObjectName("List");
 
-    QFile styleFile(":/styles.qss"); // Путь к вашему файлу стилей
+    QFile styleFile(":/style.css"); // Corrected path
     if (styleFile.open(QFile::ReadOnly)) {
         QString style = styleFile.readAll();
-        qApp->setStyleSheet(style); // Применяем стиль ко всему приложению
+        qApp->setStyleSheet(style); // Apply style
         styleFile.close();
     }
 
-    setAttribute(Qt::WA_TranslucentBackground);
+    this->setAttribute(Qt::WA_TranslucentBackground);
 
     // Initialize Database
     DatabaseManager::instance().openDatabase();
     loadTasksFromDb();
+    
+    // Style ListWidget to match Canvas Dialog's TextEdit
+    ui->listWidget->setStyleSheet(QString("QListWidget { background-color: %1; color: %2; border: none; border-radius: 10px; }").arg(Constants::COLOR_TEXT_EDIT_BG, Constants::COLOR_TEXT_WHITE));
+    
+    // Explicitly apply style to buttons to override any resource caching issues
+    // Using exact string from okayButton (line 306)
+    QString btnStyle = "QPushButton { background-color: #10192a; color: #FFFFFF; border: none; border-radius: 10px;}";
+    ui->addButton->setStyleSheet(btnStyle);
+    ui->removeButton->setStyleSheet(btnStyle);
 }
 
 List::~List()
 {
-    // DatabaseManager::instance().closeDatabase(); // Singleton handles this on destruction usually, or we can explicit close if needed
     delete ui;
 }
 
@@ -52,8 +62,31 @@ void List::paintEvent(QPaintEvent *event)
     painter.setRenderHint(QPainter::Antialiasing);
     QPainterPath path;
     path.addRoundedRect(this->rect(), 20, 20);
-    painter.fillPath(path, QBrush(QColor("#0c0f1b")));
+    painter.fillPath(path, QBrush(QColor(Constants::COLOR_BACKGROUND)));
     QWidget::paintEvent(event);
+}
+
+void List::mousePressEvent(QMouseEvent *event) {
+    if (event->button() == Qt::LeftButton) {
+        if (parentWidget())
+             dragPosition = event->globalPosition().toPoint() - parentWidget()->frameGeometry().topLeft();
+        else 
+             dragPosition = event->globalPosition().toPoint() - frameGeometry().topLeft();
+             
+        event->accept();
+    }
+}
+
+void List::mouseMoveEvent(QMouseEvent *event) {
+    if (event->buttons() & Qt::LeftButton) {
+        if (parentWidget()) {
+            // Move PARENT (MainWindow), and MainWindow's moveEvent will move List
+            parentWidget()->move(event->globalPosition().toPoint() - dragPosition);
+        } else {
+             move(event->globalPosition().toPoint() - dragPosition);
+        }
+        event->accept();
+    }
 }
 
 void List::loadTasksFromDb()
@@ -71,8 +104,8 @@ void List::createTaskItem(int id, const QString &text, bool isCompleted)
     QIcon scratch(":/image/scratch.png");
 
     QFont fontCenturyGothic;
-    fontCenturyGothic.setFamily("Century Gothic");
-    fontCenturyGothic.setPointSize(15);
+    fontCenturyGothic.setFamily(Constants::FONT_PRIMARY);
+    fontCenturyGothic.setPointSize(Constants::FONT_SIZE_LARGE);
 
     QListWidgetItem *newItem = new QListWidgetItem(ui->listWidget);
     QWidget *widget = new QWidget();
@@ -81,11 +114,11 @@ void List::createTaskItem(int id, const QString &text, bool isCompleted)
     newItem->setData(Qt::UserRole, id);
 
     QLabel *label = new QLabel(); // Number will be set by updateTaskNumbers
-    label->setFont(QFont("Arial", 15));
+    label->setFont(QFont(Constants::FONT_SECONDARY, Constants::FONT_SIZE_LARGE));
     label->setIndent(7);
 
     QLineEdit *lineEdit = new QLineEdit();
-    lineEdit->setFont(QFont("Arial", 15));
+    lineEdit->setFont(QFont(Constants::FONT_SECONDARY, Constants::FONT_SIZE_LARGE));
     lineEdit->setPlaceholderText("Type the description ...");
     lineEdit->setFont(fontCenturyGothic);
     lineEdit->setText(text);
@@ -116,22 +149,22 @@ void List::createTaskItem(int id, const QString &text, bool isCompleted)
     strikeButton->setFixedSize(buttonSize, buttonSize);
     connect(strikeButton, &QPushButton::clicked, this, &List::toggleStrikeOut);
     strikeButton->setIcon(scratch);
-    strikeButton->setStyleSheet("QPushButton { background-color: #10192a; color: #FFFFFF; border: none; border-radius: 10px;}");
+    strikeButton->setStyleSheet(QString("QPushButton { background-color: %1; color: %2; border: none; border-radius: 10px;}").arg(Constants::COLOR_ITEM_BACKGROUND, Constants::COLOR_TEXT_WHITE));
 
     QPushButton *canvasButton = new QPushButton(widget);
     canvasButton->setFixedSize(buttonSize, buttonSize);
     connect(canvasButton, &QPushButton::clicked, this, [this, id]() { openCanvas(id); });
     canvasButton->setIcon(more);
-    canvasButton->setStyleSheet("QPushButton { background-color: #10192a; color: #FFFFFF; border: none; border-radius: 10px;}");
+    canvasButton->setStyleSheet(QString("QPushButton { background-color: %1; color: %2; border: none; border-radius: 10px;}").arg(Constants::COLOR_ITEM_BACKGROUND, Constants::COLOR_TEXT_WHITE));
 
     layout->addWidget(label);
     layout->addWidget(lineEdit);
     layout->addWidget(strikeButton);
     layout->addWidget(canvasButton);
 
-    layout->setSpacing(8);
+    layout->setSpacing(Constants::LIST_ITEM_SPACING);
     layout->setAlignment(Qt::AlignCenter);
-    layout->setContentsMargins(10, 4, 10, 4);
+    layout->setContentsMargins(Constants::LIST_ITEM_MARGIN, 4, Constants::LIST_ITEM_MARGIN, 4);
     widget->setLayout(layout);
 
     newItem->setSizeHint(widget->sizeHint());
@@ -181,8 +214,8 @@ void List::on_removeButton_clicked()
 void List::updateTaskNumbers()
 {
     QFont fontCenturyGothic;
-    fontCenturyGothic.setFamily("Century Gothic");
-    fontCenturyGothic.setPointSize(15);
+    fontCenturyGothic.setFamily(Constants::FONT_PRIMARY);
+    fontCenturyGothic.setPointSize(Constants::FONT_SIZE_LARGE);
 
     for (int i = 0; i < ui->listWidget->count(); ++i)
     {
@@ -297,7 +330,7 @@ bool List::eventFilter(QObject *obj, QEvent *event)
             painter.setRenderHint(QPainter::Antialiasing);
             QPainterPath path;
             path.addRoundedRect(canvasDialog->rect(), 20, 20);
-            painter.fillPath(path, QBrush(QColor("#0c0f1b")));
+            painter.fillPath(path, QBrush(QColor(Constants::COLOR_BACKGROUND)));
         }
         return true;
     }
