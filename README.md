@@ -9,7 +9,9 @@
 A lightweight **Windows** desktop app for quick recording of daily tasks and plans.  
 Built with **C++ (C++17)** and **Qt 6 (Widgets)**. Includes a ready-to-use **installer** (no Qt required for end users).
 
-![Preview](./assets/preview.png)
+---
+
+![Preview](./assets/preview.gif)
 
 ---
 
