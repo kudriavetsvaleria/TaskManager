@@ -1,6 +1,6 @@
 <div align="right">
 
-[English](./README.md) | [Українська](./README.uk.md)
+[EN](./README.md) | [UA](./README.uk.md)
 
 </div>
 
@@ -50,17 +50,3 @@ Go to **Releases** and download the latest installer:
 - SQLite
 - QMake
 - Inno Setup (installer)
-
----
-
-## 🧩 Build from source (optional)
-
-### Requirements
-- Qt 6.x (MinGW 64-bit)
-- Qt Creator
-- Windows x64
-
-### Steps
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/kudriavetsvaleria/TaskManager.git
