@@ -1,60 +1,66 @@
-# Task Manager
+<div align="right">
 
-A powerful, sleek, and high-performance Task Manager application built with **C++** and **Qt 6**. 
-Designed with a focus on User Experience, it features a unique frameless UI with **physics-based synchronized window movement**.
+[English](./README.md) | [Українська](./README.uk.md)
 
-![Preview](C:/Users/vvkud/.gemini/antigravity/brain/cdca0fcf-43dc-4a78-b5dc-a269d290751d/uploaded_image_1767613362610.png)
+</div>
+
+# TaskManager
+
+A lightweight **Windows** desktop app for quick recording of daily tasks and plans.  
+Built with **C++ (C++17)** and **Qt 6 (Widgets)**. Includes a ready-to-use **installer** (no Qt required for end users).
+
+![Preview](./assets/preview.png)
+
+---
 
 ## ✨ Features
 
-- **Modern Frameless UI**: A distraction-free, dark-themed interface with custom rounded corners.
-- **Atomic Window Synchronization**: 
-    - The application consists of three independent windows (Main, List, Canvas) that behave as a single cohesive unit.
-    - **Pixel-Perfect Dragging**: Utilizes the **Windows DeferWindowPos API** to move all windows in a single atomic transaction, ensuring zero lag or rubber-banding.
-    - **Input Throttling**: Intelligent event processing handles high-poll-rate gaming mice (1000Hz+) for silky smooth movement (~120 FPS lock).
-- **Persistent Storage**: All tasks and instructions are efficiently stored in a local **SQLite** database.
-- **Detailed Task Canvas**: Click the "More" button to open a dedicated, modeless text editor for task descriptions.
-- **Interactive States**: Strike-through completion, hover effects, and animated transitions.
+- Create and remove tasks
+- Task details ("Canvas") for extended notes
+- Local persistent storage (**SQLite** via QtSql)
+- Frameless dark UI with custom styling
+- Synchronized multi-window behavior (Main / List / Canvas)
+
+---
+
+## ⬇️ Download (Windows)
+
+Go to **Releases** and download the latest installer:
+
+- `TaskManager_Setup.exe`
+
+> After installation, TaskManager will appear in **Start Menu** and can create a **Desktop shortcut**.
+
+---
+
+## ▶️ How to use
+
+- **Create task:** `+`
+- **Remove task:** `-`
+- **Details:** `...`
+- **Complete task:** Scratch icon
+- **Collapse/Expand list:** Arrow button
+
+---
 
 ## 🛠️ Technology Stack
 
-- **Core**: C++17
-- **Framework**: Qt 6.7 (Widgets)
-- **Database**: SQLite (via QtSql)
-- **OS Integration**: Win32 API (User32.dll) for window management optimization.
-- **Build System**: QMake
-
-## � Installation & Build
-
-### Prerequisites
-- Qt 6.7 or higher
-- MinGW 64-bit Compiler (recommended)
-
-### Steps
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/kudriavetsvaleria/TaskManager.git
-   ```
-2. Open `RestartTaskManager.pro` in Qt Creator.
-3. Configure the project for **Release** or **Debug**.
-4. Build and Run.
-
-## 🎮 Controls
-
-- **Adding Tasks**: Click the `+` button to create a new task.
-- **Removing Tasks**: Select a task and click the `-` button.
-- **Details (Canvas)**: Click the **...** (three dots) button on a task to open the detailed view.
-- **Completion**: Click the **Scratch** icon to toggle task completion.
-- **Window Management**: 
-    - Drag anywhere on the Main Window or List to move the entire application.
-    - Click the Arrow button on the Main Window to collapse/expand the task list.
-
-## 🔧 Inner Workings
-
-The project demonstrates advanced Qt widget manipulation:
-*   **Event Filtering**: Custom `QEvent` handling to hijack drag events from child windows.
-*   **Window Flags**: Usage of `Qt::Tool` to manage taskbar visibility and parent-child relationships without standard window chrome.
-*   **Performance**: Direct Win32 API calls (`BeginDeferWindowPos`) bypass the standard Qt event loop for dragging, providing native performance.
+- C++17
+- Qt 6 (Widgets, QtSql)
+- SQLite
+- QMake
+- Inno Setup (installer)
 
 ---
-*Developed by [Valeria Kudriavets](https://github.com/kudriavetsvaleria)*
+
+## 🧩 Build from source (optional)
+
+### Requirements
+- Qt 6.x (MinGW 64-bit)
+- Qt Creator
+- Windows x64
+
+### Steps
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/kudriavetsvaleria/TaskManager.git
