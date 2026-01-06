@@ -8,6 +8,6 @@
         <file>image/remove.png</file>
         <file>image/scratch.png</file>
         <file>style.css</file>
-        <file>image/TM_Logo.png</file>
+        <file>image/TM.png</file>
     </qresource>
 </RCC>

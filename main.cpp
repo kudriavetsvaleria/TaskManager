@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     a.setStyleSheet(file.readAll());
 
     // Установка иконки приложения
-    a.setWindowIcon(QIcon(":/image/TM_Logo.png"));
+    a.setWindowIcon(QIcon(":/image/TM.png"));
 
     // Установка иконки для окна
     MainWindow w;
